@@ -58,9 +58,9 @@ Bool.      Type ::= "boolean" ;
 
 Void.      Type ::= "void" ;
 
-internal   Fun. Type ::= Type "(" [Type] ")" ;
-
 separator  Type "," ;
+
+internal   FunType. FunType ::= Type "(" [Type] ")" ;
 
 -- Expressions ---------------------------------------------
 
