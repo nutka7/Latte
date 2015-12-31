@@ -27,7 +27,7 @@ findDuplicate l =
         duplicates = map fst $ filter (uncurry S.member) (zip l prefixes)
     in listToMaybe duplicates
 
-    
+
 -- Monad for checking functions
 
 type VarBindings = M.Map Ident Type
@@ -84,7 +84,7 @@ collectFunBindings topdefs = do
             let err = "multiple definitions for function `%s`"
                 err' = printf err (fromIdent funIdent)
             throwError err'
- 
+
 -- Checking function correctness
 
 funLocInfo :: Ident -> String
@@ -107,7 +107,7 @@ collectArgBindings args = do
             throwError err'
 
 checkReturn :: Bool -> Type -> Either String ()
-checkReturn ret rType = 
+checkReturn ret rType =
      unless (ret || rType == Void) $ do
         let err  = "missing return statement"
         throwError err
@@ -143,7 +143,7 @@ checkFirstDecl ident = do
     when (M.member ident current && M.notMember ident outer) $ do
         let err  = "variable `%s` declared multiple times in the same block"
             err' = printf err (fromIdent ident)
-        throwError err' 
+        throwError err'
 
 declareItem :: Type -> Item -> StmCheck ()
 declareItem dType item = do
@@ -151,8 +151,8 @@ declareItem dType item = do
     checkFirstDecl ident
     checkInit dType item
     modify (M.insert ident dType)
-    
-    where 
+
+    where
         itemIdent (NoInit ident) = ident
         itemIdent (Init ident _) = ident
 
@@ -164,7 +164,12 @@ checkRetType expType = do
             err' = printf err (show expType) (show rettype)
         throwError err'
     return True
-    
+
+checkNoDecl :: Stmt -> String -> StmCheck ()
+checkNoDecl (Decl _ _) place =
+    throwError $ "naked (not in block) declaration in " ++ place
+checkNoDecl _ _ = return ()
+
 checkStm :: Stmt -> StmCheck Bool
 checkStm Empty = return False
 
@@ -174,7 +179,7 @@ checkStm (BStmt (Block stms)) = do
     put s
     return (or rets)
 
-checkStm (Decl dType items) = do 
+checkStm (Decl dType items) = do
     mapM_ (declareItem dType) items
     return False
 
@@ -203,20 +208,22 @@ checkStm (Incr ident) = do
             when (varType /= Int) $ do
                 let err  = "Incr/Decr stmt on ``%s`` variable `%s`"
                     err' = printf err (show varType) (fromIdent ident)
-                throwError err' 
+                throwError err'
     return False
 
 checkStm (Decr ident) = checkStm (Incr ident)
 
 checkStm (Ret exp) = checkExp exp >>= checkRetType
 checkStm VRet = checkRetType Void
- 
+
 checkStm (CondElse exp stmT stmF) = do
     condType <- checkExp exp
     when (condType /= Bool) $ do
         let err  = "non-logical - ``%s`` expression in if condition"
             err' = printf err (show condType)
         throwError err'
+    checkNoDecl stmT "if true-branch"
+    checkNoDecl stmF "if false-branch"
     retT <- checkStm stmT
     retF <- checkStm stmF
     return $ case exp of
@@ -232,6 +239,7 @@ checkStm (While exp stm) = do
         let err  = "non-logical - ``%s`` expression in while condition"
             err' = printf err (show condType)
         throwError err'
+    checkNoDecl stm "while"
     ret <- checkStm stm
     return $ exp == ELitTrue && ret
 
@@ -239,8 +247,8 @@ checkStm (SExp exp) = checkExp exp >> return False
 
 
 -- Expression correctness
-    
-   
+
+
 checkExp :: Expr -> StmCheck Type
 checkExp (EVar ident) = do
     mVarType <- gets (M.lookup ident)
@@ -250,7 +258,7 @@ checkExp (EVar ident) = do
             let err  = "undeclared variable `%s` used in expression"
                 err' = printf err (fromIdent ident)
             throwError err'
-        
+
 checkExp (ELitInt int) = do
     when (int > toInteger (maxBound :: Int32)) $ do
         let err  = "constant larger than 2^31 - 1: %s"
@@ -294,7 +302,7 @@ checkExp (Neg exp) = do
             err' = printf err (show expType)
         throwError err'
     return Int
- 
+
 checkExp (Not exp) = do
     expType <- checkExp exp
     when (expType /= Bool) $ do
