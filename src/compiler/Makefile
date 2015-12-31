@@ -6,7 +6,7 @@ modules:
 	alex -g LexLatte.x
 
 binaries: modules
-# Save time ..
+	ghc --make GenASM.hs
 #	ghc --make TestLatte.hs -o TestLatte
 
 clean:
