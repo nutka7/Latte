@@ -270,18 +270,22 @@ checkExp (EApp ident exps) = do
                 err' = printf err (fromIdent ident)
             throwError err'
         Just (FunType rType argTypes) -> do
-            when (length exps /= length argTypes) $ do
-                let err  = "bad number of arguments in call to `%s`"
-                    err' = printf err (fromIdent ident)
+            let expCount = length exps
+                argCount = length argTypes
+            when (expCount /= argCount) $ do
+                let err  = "bad number of arguments in call to `%s`, expected: %s, seen: %s"
+                    err' = printf err (fromIdent ident) (show argCount) (show expCount)
                 throwError err'
             actualTypes <- mapM checkExp exps
-            let mMismatch = find (uncurry (==)) (zip argTypes actualTypes)
+            let mMismatch = findIndex (uncurry (/=)) (zip argTypes actualTypes)
             case mMismatch of
-                Nothing -> return rType
-                Just (argType, actualType) -> do
-                    let err  = "bad argument type in call to `%s`, expected: `%s`, seen: `%s`"
-                        err' = printf err (fromIdent ident) (show argType) (show actualType)
-                    throwError err'
+              Nothing -> return rType
+              Just index -> do
+                let argT = argTypes !! index
+                    actualT = actualTypes !! index
+                let err  = "bad type of %s. argument in call to `%s`, expected: `%s`, seen: `%s`"
+                    err' = printf err (show (index+1)) (fromIdent ident) (show argT) (show actualT)
+                throwError err'
 
 checkExp (Neg exp) = do
     expType <- checkExp exp
@@ -346,7 +350,7 @@ checkBinExp opName eL eR = do
     typeL <- checkExp eL
     typeR <- checkExp eR
     when (typeL /= typeR) $ do
-        let err  = "mismatched types in %s op, left: ``%s``, right: ``%s``"
+        let err  = "mismatched types in %s operator, left: ``%s``, right: ``%s``"
             err' = printf err opName (show typeL) (show typeR)
         throwError err'
     let mRetType = lookupOp opName (typeToCode typeL)
