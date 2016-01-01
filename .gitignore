@@ -8,3 +8,4 @@
 # Folder to not ignore
 !/src/
 !/lattests/
+!/mrjp-tests/
