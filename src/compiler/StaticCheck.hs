@@ -100,11 +100,18 @@ collectArgBindings :: [Arg] -> Either String VarBindings
 collectArgBindings args = do
     let argBindings = map extractArgT args
     case findDuplicate (map fst argBindings) of
-        Nothing -> return (M.fromList argBindings)
+        Nothing -> return ()
         Just argIdent -> do
             let err  = "multiple declarations for parameter `%s`"
                 err' = printf err (fromIdent argIdent)
             throwError err'
+    case find ((== Void) . snd) argBindings of
+        Nothing -> return ()
+        Just (argIdent, Void) -> do
+            let err  = "parameter `%s` declared void"
+                err' = printf err (fromIdent argIdent)
+            throwError err'
+    return (M.fromList argBindings)
 
 checkReturn :: Bool -> Type -> Either String ()
 checkReturn ret rType =
@@ -152,18 +159,9 @@ declareItem dType item = do
     checkInit dType item
     modify (M.insert ident dType)
 
-    where
-        itemIdent (NoInit ident) = ident
-        itemIdent (Init ident _) = ident
-
-checkRetType :: Type -> StmCheck Bool
-checkRetType expType = do
-    rettype <- asks retType
-    when (expType /= rettype) $ do
-        let err  = "attempted to return ``%s`` when ``%s`` value expected"
-            err' = printf err (show expType) (show rettype)
-        throwError err'
-    return True
+itemIdent :: Item -> Ident
+itemIdent (NoInit ident) = ident
+itemIdent (Init ident _) = ident
 
 checkNoDecl :: Stmt -> String -> StmCheck ()
 checkNoDecl (Decl _ _) place =
@@ -178,6 +176,11 @@ checkStm (BStmt (Block stms)) = do
     rets <- local (\r -> r { outerVars = s }) (mapM checkStm stms)
     put s
     return (or rets)
+
+checkStm (Decl Void items) = do
+    let names = map (fromIdent . itemIdent) items
+        namesStr = intercalate ", " $ map (\s -> "`" ++ s ++ "`") names
+    throwError $ "can't declare void variables: " ++ namesStr
 
 checkStm (Decl dType items) = do
     mapM_ (declareItem dType) items
@@ -213,8 +216,26 @@ checkStm (Incr ident) = do
 
 checkStm (Decr ident) = checkStm (Incr ident)
 
-checkStm (Ret exp) = checkExp exp >>= checkRetType
-checkStm VRet = checkRetType Void
+checkStm (Ret exp) = do
+    expType <- checkExp exp
+    rettype <- asks retType
+    when (rettype == Void) $ do
+        let err  = "attempted to return ``%s`` when void return expected"
+            err' = printf err (show expType)
+        throwError err'
+    when (expType /= rettype) $ do
+        let err  = "attempted to return ``%s`` when ``%s`` value expected"
+            err' = printf err (show expType) (show rettype)
+        throwError err'
+    return True
+
+checkStm VRet = do
+    rettype <- asks retType
+    when (rettype /= Void) $ do
+        let err  = "attempted to void return when expected to return ``%s``"
+            err' = printf err (show rettype)
+        throwError err'
+    return True
 
 checkStm (CondElse exp stmT stmF) = do
     condType <- checkExp exp
@@ -241,7 +262,7 @@ checkStm (While exp stm) = do
         throwError err'
     checkNoDecl stm "while"
     ret <- checkStm stm
-    return $ exp == ELitTrue && ret
+    return (exp == ELitTrue)
 
 checkStm (SExp exp) = checkExp exp >> return False
 
