@@ -28,7 +28,7 @@ findDuplicate l =
     in listToMaybe duplicates
 
 
--- Monad for checking functions
+-- Monad for checking statements
 
 type VarBindings = M.Map Ident Type
 type FunBindings = M.Map Ident FunType
