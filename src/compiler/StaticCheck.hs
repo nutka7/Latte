@@ -353,8 +353,8 @@ ops = [
     ("Add", [I], Int),
     ("Add", [S], Str),
     ("Sub", [I], Int),
-    ("Eq" , [I, S, B], Bool),
-    ("Neq", [I, S, B], Bool),
+    ("Eq" , [I, B], Bool),
+    ("Neq", [I, B], Bool),
     ("Rel", [I, B], Bool),
     ("And", [B], Bool),
     ("Or" , [B], Bool)]
