@@ -1,7 +1,7 @@
 -- Modified TestLatte.hs to parse and compile the program.
 module Main ( main ) where
 
-import System.IO ( hPutStrLn, hGetContents, readFile, stdin, stderr )
+import System.IO ( hPutStrLn, hGetContents, readFile, stdin, stdout, stderr )
 import System.Environment ( getArgs )
 import System.Exit ( exitFailure, exitSuccess )
 
@@ -11,6 +11,8 @@ import SkelLatte
 import PrintLatte
 import AbsLatte
 import StaticCheck
+import ToIntermediate
+import Text.Groom
 --import CompileASM
 
 import ErrM
@@ -36,7 +38,7 @@ run p s =
             putErr $ show ts
             putErr s
             exitFailure
-        Ok  tree -> do 
+        Ok  tree -> do
             let check = checkProgram tree
             case check of
                 Left err -> do
@@ -45,15 +47,16 @@ run p s =
                     exitFailure
                 Right () -> do
                     putErr "OK"
+                    hPutStrLn stdout (groom (simplify tree))
 --                    let code = compile tree ids
 --                    putStr code
                     exitSuccess
 
 main :: IO ()
-main = do 
+main = do
     args <- getArgs
     case args of
       [file] -> runFile pProgram file
-      _ -> do 
+      _ -> do
           putErr "Bad args."
           exitFailure
