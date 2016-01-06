@@ -17,7 +17,7 @@ fromIdent (A.Ident name) = name
 
 -- Monad for simplifying statements
 
-type VarPositions = M.Map A.Ident Int    -- position relative to EBP
+type VarPositions = M.Map A.Ident I.Var    -- position relative to EBP
 type VarBindings = M.Map A.Ident A.Type
 type FunBindings = M.Map A.Ident A.Type
 type StrLabels = M.Map Int String
@@ -42,7 +42,7 @@ simplify (A.Program topdefs) =
         m = mapM (state . simpFun funs) topdefs
         initSt = M.singleton 0 ""
         (funs', strLabels) = runState m initSt
-    in I.Program funs' strLabels
+    in I.Program funs' (M.toList strLabels)
 
     where
         funRType (A.FnDef t ident _ _) = (ident, t)
@@ -53,7 +53,7 @@ simpFun funs (A.FnDef _ ident args block) strLabels =
     let args' = map extractArg args
         st = StmState {
             varT = M.fromList args',
-            varP = M.fromList $ zip (map fst args') [8, 12..],
+            varP = M.fromList $ zip (map fst args') (map I.Param [1..]),
             lastNr = 0,
             maxNr = 0,
             strings = strLabels }
@@ -65,19 +65,18 @@ simpFun funs (A.FnDef _ ident args block) strLabels =
         extractArg (A.Arg t iden) = (iden, t)
 
 
-allocVar :: A.Ident -> A.Type -> StmM Int
+allocVar :: A.Ident -> A.Type -> StmM I.Var
 allocVar ident t = do
     st <- get
     let next = lastNr st + 1
-        pos = next * (-4)
     put $ st { lastNr = next,
                maxNr = max next (maxNr st),
-               varP = M.insert ident pos (varP st),
+               varP = M.insert ident (I.Local next) (varP st),
                varT = M.insert ident t (varT st)
           }
-    return pos
+    return (I.Local next)
 
-getPos  :: A.Ident -> StmM Int
+getPos  :: A.Ident -> StmM I.Var
 getPos  ident = gets (fromJust . M.lookup ident . varP)
 
 getType :: A.Ident -> StmM A.Type
@@ -200,10 +199,11 @@ simpExp (A.EApp ident es) = (,)
     <$> (I.EApp (fromIdent ident) <$> mapM simpExp' es)
     <*> asks (fromJust . M.lookup ident)
 
-simpExp (A.ERel eL op eR) = do
-    (eL', t) <- simpExp eL
-    (eR', _) <- simpExp eR
-    let (eL'', eR'') = case t of
-                        A.Int -> (eL', eR')
-                        A.Bool -> (I.B2I eL', I.B2I eR')
-    return (I.ERel eL'' (trRelOp op) eR'', A.Bool)
+simpExp (A.ERel eL op eR) = (, A.Bool)
+    <$> (I.ERel <$> simpExp' eL <*> pure (trRelOp op) <*> simpExp' eR)
+--    (eL', t) <- simpExp eL
+--    (eR', _) <- simpExp eR
+--    let (eL'', eR'') = case t of
+--                        A.Int -> (eL', eR')
+--                        A.Bool -> (I.B2I eL', I.B2I eR')
+--    return (I.ERel eL'' (trRelOp op) eR'', A.Bool)

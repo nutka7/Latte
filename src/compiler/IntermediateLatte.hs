@@ -2,13 +2,16 @@ module IntermediateLatte where
 
 import AbsLatte ()
 import Data.Int (Int32)
-import qualified Data.Map as M
 
-type Local = Int
 type Label = String
 
+data Var =
+   Param Int
+ | Local Int
+  deriving (Eq,Ord,Show)
+
 data Program =
-   Program [Fun] (M.Map Int String)
+   Program [Fun] [(Int, String)]
   deriving (Eq,Ord,Show)
 
 data Fun = Fun Label Stmt Int -- locals limit
@@ -18,9 +21,9 @@ data Stmt =
    Empty
  | BStmt [Stmt]
  | Decl [Item]
- | Ass Local Expr
- | Incr Local
- | Decr Local
+ | Ass Var Expr
+ | Incr Var
+ | Decr Var
  | Ret Expr
  | VRet
  | Cond Expr Stmt
@@ -31,11 +34,11 @@ data Stmt =
 
 
 data Item =
-   Item Local Expr
+   Item Var Expr
   deriving (Eq,Ord,Show)
 
 data Expr =
-   EVar Local
+   EVar Var
  | ELitInt Int32
  | ELitTrue
  | ELitFalse
@@ -46,7 +49,6 @@ data Expr =
  | EMul Expr MulOp Expr
  | EAdd Expr AddOp Expr
  | Cat Expr Expr
- | B2I Expr
  | ERel Expr RelOp Expr
  | EAnd Expr Expr
  | EOr Expr Expr

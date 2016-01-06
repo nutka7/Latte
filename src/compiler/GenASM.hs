@@ -1,7 +1,7 @@
 -- Modified TestLatte.hs to parse and compile the program.
 module Main ( main ) where
 
-import System.IO ( hPutStrLn, hGetContents, readFile, stdin, stdout, stderr )
+import System.IO ( hPutStrLn, hPutStr, hGetContents, readFile, stdin, stdout, stderr )
 import System.Environment ( getArgs )
 import System.Exit ( exitFailure, exitSuccess )
 
@@ -13,7 +13,7 @@ import AbsLatte
 import StaticCheck
 import ToIntermediate
 import Text.Groom
---import CompileASM
+import CompileLatte
 
 import ErrM
 
@@ -47,7 +47,7 @@ run p s =
                     exitFailure
                 Right () -> do
                     putErr "OK"
-                    hPutStrLn stdout (groom (simplify tree))
+                    hPutStr stdout (compile (simplify tree))
 --                    let code = compile tree ids
 --                    putStr code
                     exitSuccess
