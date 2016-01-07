@@ -13,6 +13,6 @@ clean:
 	    cd compiler && $(MAKE) clean 
 		 
 distclean: clean 
-	    -rm -rf compiler latc_x86
+	    -rm -rf compiler latc_x86 lib
 		 
 .PHONY: all clean distclean compiler lib
