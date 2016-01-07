@@ -1,5 +1,6 @@
 module CompileLatte (compile) where
 
+import Data.Char (showLitChar)
 import IntermediateLatte
 import Text.Printf
 import Data.Maybe
@@ -48,7 +49,9 @@ compile p =
     in intercalate "\n" $ reverse ("":rev_lines)
 
 putString :: Int -> String -> String
-putString = printf "%s%d: db '%s',0" strPref
+putString nr str = printf "%s%d: db `%s`,0" strPref nr (escape str)
+    where
+        escape s = foldl (.) id (map showLitChar s) $ ""
 
 putMainGl :: String
 putMainGl = printf "global %smain" funPref
