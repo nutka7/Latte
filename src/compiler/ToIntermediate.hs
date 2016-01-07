@@ -176,8 +176,8 @@ simpExp (A.EString s) = do
     modify $ \st -> st { strings = M.insert next s strLabels }
     return (I.EString next, A.Str)
 
-simpExp (A.Neg e) = (, A.Int ) <$> simpExp' e
-simpExp (A.Not e) = (, A.Bool) <$> simpExp' e
+simpExp (A.Neg e) = (, A.Int ) <$> (I.Neg <$> simpExp' e)
+simpExp (A.Not e) = (, A.Bool) <$> (I.Not <$> simpExp' e)
 
 simpExp (A.EMul eL op eR) = (, A.Int)
     <$> (I.EMul <$> simpExp' eL <*> pure (trMulOp op) <*> simpExp' eR)

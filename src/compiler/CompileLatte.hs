@@ -81,6 +81,7 @@ compFun (Fun label stm localsNum) = do
     emit $ printf "%s%s:" funPref label
     emits $ putProlog localsNum
     compStm stm
+    emits putEpilog
 
 compItem :: Item -> Code ()
 compItem (Item var e) = compStm (Ass var e)
@@ -95,9 +96,9 @@ compStm (BStmt stms) = mapM_ compStm stms
 compStm (Decl items) = mapM_ compItem items
 compStm (Ass var e) = do
     compExp e
-    emit $ printf "pop [%s]" (putAdress var)
-compStm (Incr var) = emit $ printf "inc [%s]" (putAdress var)
-compStm (Decr var) = emit $ printf "dec [%s]" (putAdress var)
+    emit $ printf "pop dword [%s]" (putAdress var)
+compStm (Incr var) = emit $ printf "inc dword [%s]" (putAdress var)
+compStm (Decr var) = emit $ printf "dec dword [%s]" (putAdress var)
 compStm (Ret e) = do
     compExp e
     emit "pop eax"
@@ -153,10 +154,10 @@ jumps = [
 
 compExp :: Expr -> Code ()
 
-compExp (EVar var) = emit $ printf "push [%s]" (putAdress var)
-compExp (ELitInt i) = emit $ printf "push %d" i
-compExp ELitTrue = emit "push 1"
-compExp ELitFalse = emit "push 0"
+compExp (EVar var) = emit $ printf "push dword [%s]" (putAdress var)
+compExp (ELitInt i) = emit $ printf "push dword %d" i
+compExp ELitTrue = emit "push dword 1"
+compExp ELitFalse = emit "push dword 0"
 compExp (EString i) = emit $ printf "push %s%d" strPref i
 compExp (EApp label es) = do
     mapM_ compExp (reverse es)
@@ -166,10 +167,10 @@ compExp (EApp label es) = do
     emit "push eax"
 compExp (Neg e) = do
     compExp e
-    emit "neg [esp]"
+    emit "neg dword [esp]"
 compExp (Not e) = do
     compExp e
-    emit "xor [esp]"
+    emit "xor dword [esp], 1"
 compExp (EMul eL Times eR) = do
     compExp eL
     compExp eR
@@ -204,18 +205,32 @@ compExp (ERel eL op eR) = do
     trueLabel  <- nextLabel
     afterLabel <- nextLabel
     emit $ printf "%s %s" (fromJust (lookup op jumps)) trueLabel
-    emit "push 0"
+    emit "push dword 0"
     emit $ printf "jmp %s" afterLabel
     emitLab trueLabel
-    emit "push 1"
+    emit "push dword 1"
     emitLab afterLabel
 compExp (EAnd eL eR) = do
+    label1 <- nextLabel
+    label2 <- nextLabel
     compExp eL
-    compExp eR
     emit "pop eax"
-    emit "and [esp], eax"
+    emit "test eax, eax"
+    emit $ printf "jz %s" label1
+    compExp eR
+    emit $ printf "jmp %s" label2
+    emitLab label1
+    emit "push dword 0"
+    emitLab label2
 compExp (EOr eL eR) = do
+    label1 <- nextLabel
+    label2 <- nextLabel
     compExp eL
-    compExp eR
     emit "pop eax"
-    emit "or [esp], eax"
+    emit "test eax, eax"
+    emit $ printf "jnz %s" label1
+    compExp eR
+    emit $ printf "jmp %s" label2
+    emitLab label1
+    emit "push dword 1"
+    emitLab label2
