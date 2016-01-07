@@ -12,7 +12,6 @@ import PrintLatte
 import AbsLatte
 import StaticCheck
 import ToIntermediate
-import Text.Groom
 import CompileLatte
 
 import ErrM
