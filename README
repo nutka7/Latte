@@ -1,0 +1,25 @@
+Rozwiązanie:
+    latc_x86 jest skryptem w bashu, który wywołuje inne pliki wykonywalne.
+    Na kompilację składają się następujące etapy:
+        1. parsowanie (bnfc)
+        2. analiza statyczna (StaticCheck.hs)
+            Sprawdza, czy program jest poprawny.
+        3. faza upraszczania (ToIntermediate.hs, IntermediateLatte.hs)
+            Produkuje pośrednie drzewo,
+            które zawiera w węzłach praktycznie całą kontekstową informację,
+            co znacznie ułatwia następną fazę.
+        4. generacja kodu asemblera (CompileLatte.hs)
+            Fazy 1-4 są połączone przez GenASM.hs.
+        5. Generacja pliku obiektowego .o (NASM)
+        6. Linkowanie z kodem bibliotecznym (gcc)
+            Zaimplementowałem dwie biblioteki w C:
+              1. runtime.c -- implementacja funkcji standardowych i konkatenacji stringów
+              2. main.c    -- zawiera funkcję main, służy za punkt startowy programu
+            Kompiluję je do kodu obiektowego przy pomocy gcc.
+
+    W korzeniu projektu znajdują się testy. Aktualnie kompilator przechodzi podstawowe wersje.
+
+Arytmetyka Latte:
+    Architektura 32 bitowa.
+    +, -, * działają modulo 2^n (w czasie operacji interpretujemy jako unsigned)
+    / - undefined, jeśli wynik poza zakresem (przypadek minInt / -1)

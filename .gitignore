@@ -4,6 +4,7 @@
 # Files to not ignore
 !/.gitignore
 !/Makefile
+!/README
 
 # Folder to not ignore
 !/src/
