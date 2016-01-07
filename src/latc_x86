@@ -1,0 +1,27 @@
+if [ "$#" -ne 1 ]; then
+    echo "Illegal number of parameters"
+    echo "Only exactly one *.lat filename allowed"
+    exit 1
+fi
+
+if [[ ! $1 == *.lat ]]; then
+    echo "Basename of the file must be in form *.lat"
+    exit 1
+fi
+
+if [ ! -f $1 ]; then
+    echo "File not found!"
+    exit 1
+fi
+
+infile=$(realpath $1)
+noext=${infile%.lat}
+fileASM=$noext.s
+fileO=$noext.o
+
+cd $(dirname $(realpath $0))
+
+./compiler/GenASM $infile 1> $fileASM || { rm $fileASM; exit 1; }
+nasm -f elf32 $fileASM -o $fileO || exit 1
+gcc -m32 $fileO lib/runtime.o lib/main.o -o $noext || { rm $fileO; exit 1; }
+rm $fileO
